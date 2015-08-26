@@ -1,26 +1,44 @@
 package net.za.dyndns.gerd.lauschedlf;
 
-import android.support.v7.app.AppCompatActivity;
+import android.app.ProgressDialog;
+import android.content.Context;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import org.apache.commons.io.IOUtils;
 import org.xmlpull.v1.XmlPullParserException;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
-
-public class MainActivity extends AppCompatActivity {
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
+/*
+* File -> Project Structure -> modules app -> Dependencies
+* Click '+' in the upper right corner and select "Library dependency"
+* In the search field type: "org.apache.commons.io" and click Search
+* Select "org.apache.directory.studio:org.apache.commons.io:
+* */
+public class MainActivity extends AppCompatActivity
+  implements AsyncTaskCompleteListener<String>
+{
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    XmlDlfParse parseDlf = new XmlDlfParse();
-    String xmlText;
-    //xmlText = getResources().getString(R.string.dlf_xml_text);
-    xmlText = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>\n" +
+    String xmlString;
+    //xmlString = getResources().getString(R.string.dlf_xml_text);
+    xmlString = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>\n" +
       "<entries page=\"1\" pages=\"14\">\n" +
       "  <item duration=\"1480\" file_id=\"5050c259\" i=\"0\" id=\"391729\" station=\"4\" timestamp=\"1440426902\" url=\"http://ondemand-mp3.dradio.de/file/dradio/2015/08/24/dlf_20150824_1635_5050c259.mp3\">\n" +
       "    <datetime>2015-08-24 16:35:02</datetime>\n" +
@@ -103,16 +121,25 @@ public class MainActivity extends AppCompatActivity {
       "    <article id=\"\"/>\n" +
       "  </item>\n" +
       "</entries>\n";
-    String args [] = {xmlText};
-    Log.i("M010", xmlText );
-    try {
-      parseDlf.main(args);
-    } catch (XmlPullParserException e) {
-      e.printStackTrace();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
 
+    //Log.i("M010", xmlString );
+    // myParser.setInput(new BufferedReader(new InputStreamReader(System.in)));
+    // myParser.setInput(new StringReader(xmlString));
+
+
+    lies();
+
+  }
+
+  public void lies() {
+    String myUri = "http://srv.deutschlandradio.de/"
+      + "aodlistaudio.1706.de.rpc"
+      + "?drau:searchterm=forschung+aktuell"
+      + "&drau:page=2";
+
+
+    A a = new A(this, this);
+    a.execute(myUri);
   }
 
   @Override
@@ -135,5 +162,95 @@ public class MainActivity extends AppCompatActivity {
     }
 
     return super.onOptionsItemSelected(item);
+  }
+
+  @Override
+  public void onTaskComplete(String result) {
+    // do whatever you need
+    XmlDlfParse parseDlf = new XmlDlfParse();
+    Reader reader = new StringReader(result);
+    try {
+      Log.i("M020", "tues() rufen");
+      parseDlf.tues(reader);
+    } catch (XmlPullParserException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+}
+
+// http://stackoverflow.com/questions/3291490/common-class-for-asynctask-in-android
+
+interface AsyncTaskCompleteListener<T> {
+  void onTaskComplete(T result);
+}
+
+class A extends AsyncTask<String, Void, String> {
+  private AsyncTaskCompleteListener<String> callback;
+  private Context context = null;
+  private ProgressDialog progressDialog = null;
+
+  public A(Context context, AsyncTaskCompleteListener<String> cb) {
+    this.context = context;
+    this.callback = cb;
+  }
+
+  @Override
+
+  protected String doInBackground(String... urls) {
+
+    URL url = null;
+    try {
+      url = new URL(urls[0]);
+    } catch (MalformedURLException e) {
+      e.printStackTrace();
+    }
+    HttpURLConnection conn = null;
+    try {
+      if (url != null) {
+        conn = (HttpURLConnection) url.openConnection();
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    try {
+      if (conn != null) {
+        conn.setRequestMethod("GET");
+      }
+    } catch (ProtocolException e) {
+      e.printStackTrace();
+    }
+
+// read the response
+    try {
+      if (conn != null) {
+        Log.i("M030", "Response Code: " + conn.getResponseCode());
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    InputStream in = null;
+    try {
+      in = new BufferedInputStream(conn.getInputStream());
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    String response = null;
+    try {
+      if (in != null) {
+        response = IOUtils.toString(in, "UTF-8");
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return response;
+
+  }
+
+  protected void onPostExecute(String result) {
+    // progressDialog.dismiss();
+    Log.i("M040", "on Post execute called");
+    callback.onTaskComplete(result);
   }
 }

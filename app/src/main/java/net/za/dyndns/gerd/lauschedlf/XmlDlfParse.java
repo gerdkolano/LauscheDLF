@@ -7,9 +7,8 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
 
@@ -17,32 +16,32 @@ import java.util.ArrayList;
  * Created by hanno on 25.08.15.
  */
 public class XmlDlfParse {
-  static XmlPullParser myParser;
+  XmlPullParser myParser;
 
-  /*
-    private static void attribut(String attributname) {
-       druckeln(attributname + " = " + myParser.getAttributeValue(null, attributname));
-    }
-  */
-  public static void main(String args[])
+  public static void main(String args[]) throws XmlPullParserException, IOException {
+    String xmlString = args[0];
+    new XmlDlfParse().tues(new StringReader(xmlString));
+  }
+
+  public void tues(Reader reader)
     throws XmlPullParserException, IOException {
+    Log.i("X020", "tues() erreicht");
 
     XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
     factory.setNamespaceAware(true);
     myParser = factory.newPullParser();
 
-    myParser.setInput(new BufferedReader(new InputStreamReader(System.in)));
-    String xmlString = args[0];
-    myParser.setInput(new StringReader(xmlString));
+    myParser.setInput(reader);
 
     ArrayList<Item> liste = new ArrayList<>();
     String text = "";
     Item sendung = null;
 
+    String namespace = null;
     int eventType = myParser.getEventType();
     while (eventType != XmlPullParser.END_DOCUMENT) {
       String name = myParser.getName();
-      Log.i("X020", name==null?"null":name);
+      //Log.i("X020", name==null?"null":name);
       switch (eventType) {
         case XmlPullParser.START_DOCUMENT:
           drucke("Start document\n");
@@ -52,19 +51,15 @@ public class XmlDlfParse {
           if (name == null) break;
           switch (name) {
             case "entries":
-              //attribut("pages");
-              //attribut("page" );
-
               break;
             case "item":
               sendung = new Item();
-              sendung.itemAttribut.i = myParser.getAttributeValue(null, "id");
-              sendung.itemAttribut.file_id = myParser.getAttributeValue(null, "file_id");
-              sendung.itemAttribut.url = myParser.getAttributeValue(null, "url");
-              sendung.itemAttribut.timestamp = myParser.getAttributeValue(null, "timestamp");
-              sendung.itemAttribut.duration = myParser.getAttributeValue(null, "duration");
-              sendung.itemAttribut.station = myParser.getAttributeValue(null, "station");
-
+              sendung.itemAttribut.i = myParser.getAttributeValue(namespace, "id");
+              sendung.itemAttribut.file_id = myParser.getAttributeValue(namespace, "file_id");
+              sendung.itemAttribut.url = myParser.getAttributeValue(namespace, "url");
+              sendung.itemAttribut.timestamp = myParser.getAttributeValue(namespace, "timestamp");
+              sendung.itemAttribut.duration = myParser.getAttributeValue(namespace, "duration");
+              sendung.itemAttribut.station = myParser.getAttributeValue(namespace, "station");
               break;
             case "datetime":
               break;
@@ -76,12 +71,12 @@ public class XmlDlfParse {
               break;
             case "sendung":
               if (sendung != null) {
-                sendung.sendungsAttribut.id = myParser.getAttributeValue(null, "id");
+                sendung.sendungsAttribut.id = myParser.getAttributeValue(namespace, "id");
               }
               break;
             case "article":
               if (sendung != null) {
-                sendung.articleAttribut.id = myParser.getAttributeValue(null, "id");
+                sendung.articleAttribut.id = myParser.getAttributeValue(namespace, "id");
               }
               break;
             default:  // skip(myParser);
@@ -92,9 +87,7 @@ public class XmlDlfParse {
         case XmlPullParser.TEXT:
           text = myParser.getText();
           text = text.replace("\n", "\\n");
-          // if("\n".equals(text)) { text = "leer";}
           // if( myParser.isWhitespace()) {druckeln(" <" + text + ">");}
-          //if(!myParser.isWhitespace()) {druckeln(" {" + text + "}");}
           break;
 
         case XmlPullParser.END_TAG:
@@ -134,6 +127,7 @@ public class XmlDlfParse {
       drucke(element + "Sendung aus der \"liste\" erledigt\n");
     }
   }
+
   static void drucke(String arg) {
     //System.out.print(arg);
     Log.i("X010", arg);
@@ -142,12 +136,12 @@ public class XmlDlfParse {
 
 // http://www.tutorialspoint.com/android/android_xml_parsers.htm
 class Item {
-  public Attribut itemAttribut;
+  public ItemAttribut itemAttribut;
   public SendungsAttribut sendungsAttribut;
   public ArticleAttribut articleAttribut;
 
   Item() {
-    itemAttribut = this.new Attribut();
+    itemAttribut = this.new ItemAttribut();
     sendungsAttribut = this.new SendungsAttribut();
     articleAttribut = this.new ArticleAttribut();
   }
@@ -157,7 +151,7 @@ class Item {
 
     public String toString() {
       return ""
-        + "           Attribut id       " + " = " + "\"" + id + "\"\n"
+        + "           ItemAttribut id       " + " = " + "\"" + id + "\"\n"
         ;
     }
   }
@@ -167,12 +161,12 @@ class Item {
 
     public String toString() {
       return ""
-        + "           Attribut id       " + " = " + "\"" + id + "\"\n"
+        + "           ItemAttribut id       " + " = " + "\"" + id + "\"\n"
         ;
     }
   }
 
-  class Attribut {
+  class ItemAttribut {
     String i;
     String file_id;
     String url;
@@ -182,12 +176,12 @@ class Item {
 
     public String toString() {
       return ""
-        + "           Attribut i        " + " = " + "\"" + i + "\"\n"
-        + "           Attribut file_id  " + " = " + "\"" + file_id + "\"\n"
-        + "           Attribut url      " + " = " + "\"" + url + "\"\n"
-        + "           Attribut timestamp" + " = " + "\"" + timestamp + "\"\n"
-        + "           Attribut duration " + " = " + "\"" + duration + "\"\n"
-        + "           Attribut station  " + " = " + "\"" + station + "\"\n"
+        + "           ItemAttribut i        " + " = " + "\"" + i + "\"\n"
+        + "           ItemAttribut file_id  " + " = " + "\"" + file_id + "\"\n"
+        + "           ItemAttribut url      " + " = " + "\"" + url + "\"\n"
+        + "           ItemAttribut timestamp" + " = " + "\"" + timestamp + "\"\n"
+        + "           ItemAttribut duration " + " = " + "\"" + duration + "\"\n"
+        + "           ItemAttribut station  " + " = " + "\"" + station + "\"\n"
         ;
     }
   }
@@ -215,4 +209,3 @@ class Item {
       ;
   }
 }
-// http://www.tutorialspoint.com/android/android_xml_parsers.htm
