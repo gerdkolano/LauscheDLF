@@ -20,12 +20,12 @@ public class XmlDlfParse {
 
   public static void main(String args[]) throws XmlPullParserException, IOException {
     String xmlString = args[0];
-    new XmlDlfParse().tues(new StringReader(xmlString));
+    new XmlDlfParse().holeEineXmlSeite(new StringReader(xmlString));
   }
 
-  public void tues(Reader reader)
+  public Item holeEineXmlSeite(Reader reader)
     throws XmlPullParserException, IOException {
-    Log.i("X020", "tues() erreicht");
+    Log.i("X020", "holeEineXmlSeite() erreicht");
 
     XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
     factory.setNamespaceAware(true);
@@ -36,8 +36,10 @@ public class XmlDlfParse {
     ArrayList<Item> liste = new ArrayList<>();
     String text = "";
     Item sendung = null;
-
+    PagePages pagePages = null;
+    //noinspection
     String namespace = null;
+
     int eventType = myParser.getEventType();
     while (eventType != XmlPullParser.END_DOCUMENT) {
       String name = myParser.getName();
@@ -51,9 +53,13 @@ public class XmlDlfParse {
           if (name == null) break;
           switch (name) {
             case "entries":
+              pagePages = new PagePages();
+              pagePages.page = myParser.getAttributeValue(namespace, "page");
+              pagePages.pages = myParser.getAttributeValue(namespace, "pages");
               break;
             case "item":
               sendung = new Item();
+              sendung.pagePages = pagePages;
               sendung.itemAttribut.i = myParser.getAttributeValue(namespace, "id");
               sendung.itemAttribut.file_id = myParser.getAttributeValue(namespace, "file_id");
               sendung.itemAttribut.url = myParser.getAttributeValue(namespace, "url");
@@ -126,11 +132,25 @@ public class XmlDlfParse {
     for (Item element : liste) {
       drucke(element + "Sendung aus der \"liste\" erledigt\n");
     }
+    return sendung;
+  }
+int debug = 0;
+   void drucke(String arg) {
+    //System.out.print(arg);
+    if(this.debug>8) Log.i("X010", arg);
+  }
+}
+
+class PagePages {
+  public String page;
+  public String pages;
+
+  public int getPage() {
+    return Integer.parseInt(page);
   }
 
-  static void drucke(String arg) {
-    //System.out.print(arg);
-    Log.i("X010", arg);
+  public int getPages() {
+    return Integer.parseInt(pages);
   }
 }
 
@@ -139,6 +159,7 @@ class Item {
   public ItemAttribut itemAttribut;
   public SendungsAttribut sendungsAttribut;
   public ArticleAttribut articleAttribut;
+  public PagePages pagePages;
 
   Item() {
     itemAttribut = this.new ItemAttribut();

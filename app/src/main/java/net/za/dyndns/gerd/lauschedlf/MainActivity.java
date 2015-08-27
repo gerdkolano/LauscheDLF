@@ -21,6 +21,8 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.net.UnknownHostException;
+
 /*
 * File -> Project Structure -> modules app -> Dependencies
 * Click '+' in the upper right corner and select "Library dependency"
@@ -28,8 +30,7 @@ import java.net.URL;
 * Select "org.apache.directory.studio:org.apache.commons.io:
 * */
 public class MainActivity extends AppCompatActivity
-  implements AsyncTaskCompleteListener<String>
-{
+  implements AsyncTaskCompleteListener<String> {
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -127,19 +128,8 @@ public class MainActivity extends AppCompatActivity
     // myParser.setInput(new StringReader(xmlString));
 
 
-    lies();
+    lies(3);
 
-  }
-
-  public void lies() {
-    String myUri = "http://srv.deutschlandradio.de/"
-      + "aodlistaudio.1706.de.rpc"
-      + "?drau:searchterm=forschung+aktuell"
-      + "&drau:page=2";
-
-
-    A a = new A(this, this);
-    a.execute(myUri);
   }
 
   @Override
@@ -164,17 +154,30 @@ public class MainActivity extends AppCompatActivity
     return super.onOptionsItemSelected(item);
   }
 
+  public void lies(int page) {
+    Log.i("M022", "lies(" + page + ")");
+    String myUri = "http://srv.deutschlandradio.de/"
+      + "aodlistaudio.1706.de.rpc"
+      + "?drau:searchterm=forschung+aktuell"
+      + "&drau:page="
+      + page;
+
+    Hintergrund hintergrund = new Hintergrund(this, this);
+    hintergrund.execute(myUri);
+  }
+
   @Override
   public void onTaskComplete(String result) {
     // do whatever you need
     XmlDlfParse parseDlf = new XmlDlfParse();
     Reader reader = new StringReader(result);
     try {
-      Log.i("M020", "tues() rufen");
-      parseDlf.tues(reader);
-    } catch (XmlPullParserException e) {
-      e.printStackTrace();
-    } catch (IOException e) {
+      Log.i("M022", "parseDlf.holeEineXmlSeite(reader) rufen");
+      Item eineXmlSeite = parseDlf.holeEineXmlSeite(reader);
+      Log.i("M024", String.format("page %d pages %d",
+        eineXmlSeite.pagePages.getPage(),
+        eineXmlSeite.pagePages.getPages()));
+    } catch (XmlPullParserException | IOException e) {
       e.printStackTrace();
     }
   }
@@ -185,72 +188,102 @@ public class MainActivity extends AppCompatActivity
 interface AsyncTaskCompleteListener<T> {
   void onTaskComplete(T result);
 }
+// class Hintergrund extends AsyncTask<String, Void, AsyncTaskResult<String>> {
+// class Hintergrund extends AsyncTask<String, Void, String> {
 
-class A extends AsyncTask<String, Void, String> {
+class Hintergrund extends AsyncTask<String, Void, AsyncTaskResult<String>> {
   private AsyncTaskCompleteListener<String> callback;
   private Context context = null;
   private ProgressDialog progressDialog = null;
 
-  public A(Context context, AsyncTaskCompleteListener<String> cb) {
+  public Hintergrund(Context context, AsyncTaskCompleteListener<String> callback) {
     this.context = context;
-    this.callback = cb;
+    this.callback = callback;
+    progressDialog = null;
   }
 
   @Override
 
-  protected String doInBackground(String... urls) {
+  protected AsyncTaskResult<String> doInBackground(String... urls) {
 
-    URL url = null;
-    try {
-      url = new URL(urls[0]);
-    } catch (MalformedURLException e) {
-      e.printStackTrace();
-    }
     HttpURLConnection conn = null;
+    String response;
     try {
-      if (url != null) {
-        conn = (HttpURLConnection) url.openConnection();
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    try {
-      if (conn != null) {
+      URL url = new URL(urls[0]);
+      conn = (HttpURLConnection) url.openConnection();
+      if (conn == null) {
+        return new AsyncTaskResult<>(new Exception());
+      } else {
+        Log.i("M048", "trying to read XML from the internet");
         conn.setRequestMethod("GET");
-      }
-    } catch (ProtocolException e) {
-      e.printStackTrace();
-    }
-
-// read the response
-    try {
-      if (conn != null) {
-        Log.i("M030", "Response Code: " + conn.getResponseCode());
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    InputStream in = null;
-    try {
-      in = new BufferedInputStream(conn.getInputStream());
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    String response = null;
-    try {
-      if (in != null) {
+        int responseCode;
+        responseCode = conn.getResponseCode();
+        Log.i("M033", "Response Code: " + responseCode);
+        InputStream in = new BufferedInputStream(conn.getInputStream());
         response = IOUtils.toString(in, "UTF-8");
       }
+    } catch (MalformedURLException e) {
+      return new AsyncTaskResult<>(e);
+    } catch (UnknownHostException e) {
+      return new AsyncTaskResult<>(e);
+    } catch (ProtocolException e) {
+      return new AsyncTaskResult<>(e);
     } catch (IOException e) {
-      e.printStackTrace();
+      return new AsyncTaskResult<>(e);
     }
-    return response;
+
+    int debug = 1;
+    if (debug > 8) Log.i("M050", "response =\n" + response + "\n= response");
+    if (debug > 8) Log.i("M051", "= response");
+
+    return new AsyncTaskResult<>(response);
 
   }
 
-  protected void onPostExecute(String result) {
-    // progressDialog.dismiss();
-    Log.i("M040", "on Post execute called");
-    callback.onTaskComplete(result);
+  protected void onPreExecute() {
+    progressDialog = new ProgressDialog(this.context);
+    progressDialog.setMessage("Bitte Geduld ...");
+    progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+    progressDialog.setCancelable(true);
+    progressDialog.show();
+  }
+
+  protected void onPostExecute(AsyncTaskResult<String> result) {
+    progressDialog.dismiss();
+    Log.i("M040", "on Post execute arbeitet");
+
+    Exception exception = result.getError();
+    if (exception != null) {
+      // error handling here
+      Log.i("M060", "Fehler " + exception.getMessage());
+      //e.printStackTrace();
+    } else if (isCancelled()) {
+      // cancel handling here
+    } else {
+      // result handling here
+      callback.onTaskComplete(result.getResult());
+    }
+
+  }
+}
+
+class AsyncTaskResult<T> {
+  private T result;
+  private Exception error;
+
+  public T getResult() {
+    return result;
+  }
+
+  public Exception getError() {
+    return error;
+  }
+
+  public AsyncTaskResult(T result) {
+    this.result = result;
+  }
+
+  public AsyncTaskResult(Exception error) {
+    this.error = error;
   }
 }
