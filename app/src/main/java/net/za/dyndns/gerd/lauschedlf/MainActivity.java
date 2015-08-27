@@ -22,6 +22,7 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 /*
 * File -> Project Structure -> modules app -> Dependencies
@@ -30,13 +31,35 @@ import java.net.UnknownHostException;
 * Select "org.apache.directory.studio:org.apache.commons.io:
 * */
 public class MainActivity extends AppCompatActivity
-  implements AsyncTaskCompleteListener<String> {
+  implements AsyncTask_A_CompleteListener<ArrayList<Item>> {
+
+  @Override
+  public boolean onCreateOptionsMenu(Menu menu) {
+    // Inflate the menu; this adds items to the action bar if it is present.
+    getMenuInflater().inflate(R.menu.menu_main, menu);
+    return true;
+  }
+
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    // Handle action bar item clicks here. The action bar will
+    // automatically handle clicks on the Home/Up button, so long
+    // as you specify a parent activity in AndroidManifest.xml.
+    int id = item.getItemId();
+
+    //noinspection SimplifiableIfStatement
+    if (id == R.id.action_settings) {
+      return true;
+    }
+
+    return super.onOptionsItemSelected(item);
+  }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-
+/*
     String xmlString;
     //xmlString = getResources().getString(R.string.dlf_xml_text);
     xmlString = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>\n" +
@@ -122,168 +145,203 @@ public class MainActivity extends AppCompatActivity
       "    <article id=\"\"/>\n" +
       "  </item>\n" +
       "</entries>\n";
-
+*/
     //Log.i("M010", xmlString );
     // myParser.setInput(new BufferedReader(new InputStreamReader(System.in)));
     // myParser.setInput(new StringReader(xmlString));
 
-
-    lies(3);
-
-  }
-
-  @Override
-  public boolean onCreateOptionsMenu(Menu menu) {
-    // Inflate the menu; this adds items to the action bar if it is present.
-    getMenuInflater().inflate(R.menu.menu_main, menu);
-    return true;
-  }
-
-  @Override
-  public boolean onOptionsItemSelected(MenuItem item) {
-    // Handle action bar item clicks here. The action bar will
-    // automatically handle clicks on the Home/Up button, so long
-    // as you specify a parent activity in AndroidManifest.xml.
-    int id = item.getItemId();
-
-    //noinspection SimplifiableIfStatement
-    if (id == R.id.action_settings) {
-      return true;
-    }
-
-    return super.onOptionsItemSelected(item);
-  }
-
-  public void lies(int page) {
-    Log.i("M022", "lies(" + page + ")");
-    String myUri = "http://srv.deutschlandradio.de/"
+    String searchterm = "forschung+aktuell";
+    searchterm = "computer+kommunikation";
+    String forschungAktuell = "http://srv.deutschlandradio.de/"
       + "aodlistaudio.1706.de.rpc"
-      + "?drau:searchterm=forschung+aktuell"
-      + "&drau:page="
-      + page;
+      + "?drau:searchterm=" + searchterm
+      + "&drau:page=";
+    //lieseine(3);
+    liesalle(1, forschungAktuell);
 
-    Hintergrund hintergrund = new Hintergrund(this, this);
-    hintergrund.execute(myUri);
   }
+
+  public void lieseine(int page, String forschungAktuell) {
+    Log.i("M021", "lies(" + forschungAktuell + page + ")");
+
+    Hintergrund_A_ hintergrund = new Hintergrund_A_("nureine", this, this);
+    hintergrund.execute(forschungAktuell + page);
+  }
+
+  public void liesalle(int page, String forschungAktuell) {
+    Log.i("M021", "lies(" + forschungAktuell + page + ")");
+
+    Hintergrund_A_ hintergrund = new Hintergrund_A_(forschungAktuell, this, this);
+    hintergrund.execute(forschungAktuell + page);
+  }
+
+  public void liesviele(int letzte, String forschungAktuell) {
+    String[] urls = new String[letzte - 1];
+    for (int ii = 0; ii < urls.length; ii++) {
+      urls[ii] = forschungAktuell + (ii + 2);
+/*
+    String[] urls = new String[letzte];
+    for (int ii = 1; ii <= letzte; ii++) {
+      urls[ii-1] = forschungAktuell
+        + ii;
+
+*/
+    }
+
+    Hintergrund_A_ hintergrund = new Hintergrund_A_("nureine", this, this);
+    hintergrund.execute(urls);
+  }
+
+  private ArrayList<Item> globalAlleXmlSeiten = null;
 
   @Override
-  public void onTaskComplete(String result) {
+  public void onTask_A_Complete(String wunsch, ArrayList<Item> result) {
     // do whatever you need
-    XmlDlfParse parseDlf = new XmlDlfParse();
-    Reader reader = new StringReader(result);
-    try {
-      Log.i("M022", "parseDlf.holeEineXmlSeite(reader) rufen");
-      Item eineXmlSeite = parseDlf.holeEineXmlSeite(reader);
-      Log.i("M024", String.format("page %d pages %d",
-        eineXmlSeite.pagePages.getPage(),
-        eineXmlSeite.pagePages.getPages()));
-    } catch (XmlPullParserException | IOException e) {
-      e.printStackTrace();
+    //XmlDlfParse parseDlf = new XmlDlfParse();
+    //Reader reader = new StringReader(result);
+    Log.i("M023", "parseDlf.holeEineXmlSeite(reader) rufen");
+
+    //ArrayList<Item> eineXmlSeite = parseDlf.holeEineXmlSeite(reader);
+
+    Log.i("M024", String.format("Seite %d von %d",
+      result.get(0).pagePages.getPage(),
+      result.get(0).pagePages.getPages()));
+    // Log.i("M024", "Ergebnis\n" + result.toString());
+
+    if (globalAlleXmlSeiten == null) {
+      globalAlleXmlSeiten = result;
+    } else {
+      globalAlleXmlSeiten.addAll(result);
+    }
+
+/*
+    for ( int ii=0;ii<result.lastIndexOf(result);ii++) {
+      Log.i("M060", result.get(ii).itemAttribut.url);
+    }
+*/
+    if (!"nureine".equals(wunsch)) {
+      liesviele(result.get(0).pagePages.getPages(), wunsch);
+    } else {
+      for (Item elem : globalAlleXmlSeiten) {
+        Log.i("M062", elem.datetime + " " + elem.itemAttribut.url);
+      }
+
     }
   }
-}
+
+//}
 
 // http://stackoverflow.com/questions/3291490/common-class-for-asynctask-in-android
-
-interface AsyncTaskCompleteListener<T> {
-  void onTaskComplete(T result);
-}
 // class Hintergrund extends AsyncTask<String, Void, AsyncTaskResult<String>> {
 // class Hintergrund extends AsyncTask<String, Void, String> {
 
-class Hintergrund extends AsyncTask<String, Void, AsyncTaskResult<String>> {
-  private AsyncTaskCompleteListener<String> callback;
-  private Context context = null;
-  private ProgressDialog progressDialog = null;
+  class Hintergrund_A_ extends AsyncTask<String, Void, AsyncTaskResult<ArrayList<Item>>> {
+    private AsyncTask_A_CompleteListener<ArrayList<Item>> callback;
+    private Context context = null;
+    private String wieviele;
+    private ProgressDialog progressDialog = null;
 
-  public Hintergrund(Context context, AsyncTaskCompleteListener<String> callback) {
-    this.context = context;
-    this.callback = callback;
-    progressDialog = null;
-  }
+    public Hintergrund_A_(String wieviele, Context context, AsyncTask_A_CompleteListener<ArrayList<Item>> callback) {
+      this.wieviele = wieviele;
+      this.context = context;
+      this.callback = callback;
+      progressDialog = null;
+    }
 
-  @Override
+    @Override
+    protected AsyncTaskResult<ArrayList<Item>> doInBackground(String... urls) {
+      XmlDlfParse parseDlf = new XmlDlfParse();
+      ArrayList<Item> alleXmlSeiten = null;
+      String response;
+      for (String eineUrl : urls) {
+        try {
+          Log.i("M048", "hole " + eineUrl);
+          HttpURLConnection conn;
+          URL url = new URL(eineUrl);
+          conn = (HttpURLConnection) url.openConnection();
+          if (conn == null) {
+            return new AsyncTaskResult<>(new Exception());
+          } else {
+            conn.setRequestMethod("GET");
+            int responseCode;
+            responseCode = conn.getResponseCode();
+            Log.i("M033", "Response Code " + responseCode);
+            InputStream in = new BufferedInputStream(conn.getInputStream());
+            response = IOUtils.toString(in, "UTF-8");
 
-  protected AsyncTaskResult<String> doInBackground(String... urls) {
+            Reader reader = new StringReader(response);
+            ArrayList<Item> eineXmlSeite = parseDlf.holeEineXmlSeite(reader);
+            if (alleXmlSeiten == null) {
+              alleXmlSeiten = eineXmlSeite;
+            } else {
+              alleXmlSeiten.addAll(eineXmlSeite);
+            }
 
-    HttpURLConnection conn = null;
-    String response;
-    try {
-      URL url = new URL(urls[0]);
-      conn = (HttpURLConnection) url.openConnection();
-      if (conn == null) {
-        return new AsyncTaskResult<>(new Exception());
-      } else {
-        Log.i("M048", "trying to read XML from the internet");
-        conn.setRequestMethod("GET");
-        int responseCode;
-        responseCode = conn.getResponseCode();
-        Log.i("M033", "Response Code: " + responseCode);
-        InputStream in = new BufferedInputStream(conn.getInputStream());
-        response = IOUtils.toString(in, "UTF-8");
+          }
+        } catch (MalformedURLException e) {
+          return new AsyncTaskResult<>(e);
+        } catch (UnknownHostException e) {
+          return new AsyncTaskResult<>(e);
+        } catch (ProtocolException e) {
+          return new AsyncTaskResult<>(e);
+        } catch (IOException e) {
+          return new AsyncTaskResult<>(e);
+        } catch (XmlPullParserException e) {
+          return new AsyncTaskResult<>(e);
+        }
       }
-    } catch (MalformedURLException e) {
-      return new AsyncTaskResult<>(e);
-    } catch (UnknownHostException e) {
-      return new AsyncTaskResult<>(e);
-    } catch (ProtocolException e) {
-      return new AsyncTaskResult<>(e);
-    } catch (IOException e) {
-      return new AsyncTaskResult<>(e);
+      return new AsyncTaskResult<>(alleXmlSeiten);
     }
 
-    int debug = 1;
-    if (debug > 8) Log.i("M050", "response =\n" + response + "\n= response");
-    if (debug > 8) Log.i("M051", "= response");
-
-    return new AsyncTaskResult<>(response);
-
-  }
-
-  protected void onPreExecute() {
-    progressDialog = new ProgressDialog(this.context);
-    progressDialog.setMessage("Bitte Geduld ...");
-    progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-    progressDialog.setCancelable(true);
-    progressDialog.show();
-  }
-
-  protected void onPostExecute(AsyncTaskResult<String> result) {
-    progressDialog.dismiss();
-    Log.i("M040", "on Post execute arbeitet");
-
-    Exception exception = result.getError();
-    if (exception != null) {
-      // error handling here
-      Log.i("M060", "Fehler " + exception.getMessage());
-      //e.printStackTrace();
-    } else if (isCancelled()) {
-      // cancel handling here
-    } else {
-      // result handling here
-      callback.onTaskComplete(result.getResult());
+    protected void onPreExecute() {
+      progressDialog = new ProgressDialog(this.context);
+      progressDialog.setMessage("Bitte Geduld ...");
+      progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+      progressDialog.setCancelable(true);
+      progressDialog.show();
     }
 
+    protected void onPostExecute(AsyncTaskResult<ArrayList<Item>> result) {
+      progressDialog.dismiss();
+      Log.i("M040", "on Post execute arbeitet");
+
+      Exception exception = result.getError();
+      if (exception != null) {
+        // error handling here
+        Log.i("M060", "Fehler " + exception.getMessage());
+        //e.printStackTrace();
+      } else if (isCancelled()) {
+        // cancel handling here
+      } else {
+        // result handling here
+        callback.onTask_A_Complete(wieviele, result.getResult());
+      }
+
+    }
+  }
+
+  class AsyncTaskResult<T> {
+    private T result;
+    private Exception error;
+
+    public T getResult() {
+      return result;
+    }
+
+    public Exception getError() {
+      return error;
+    }
+
+    public AsyncTaskResult(T result) {
+      this.result = result;
+    }
+
+    public AsyncTaskResult(Exception error) {
+      this.error = error;
+    }
   }
 }
 
-class AsyncTaskResult<T> {
-  private T result;
-  private Exception error;
-
-  public T getResult() {
-    return result;
-  }
-
-  public Exception getError() {
-    return error;
-  }
-
-  public AsyncTaskResult(T result) {
-    this.result = result;
-  }
-
-  public AsyncTaskResult(Exception error) {
-    this.error = error;
-  }
+interface AsyncTask_A_CompleteListener<T> {
+  void onTask_A_Complete(String wunsch, T result);
 }

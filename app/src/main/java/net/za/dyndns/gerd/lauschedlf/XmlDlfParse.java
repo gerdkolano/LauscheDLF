@@ -23,7 +23,7 @@ public class XmlDlfParse {
     new XmlDlfParse().holeEineXmlSeite(new StringReader(xmlString));
   }
 
-  public Item holeEineXmlSeite(Reader reader)
+  public ArrayList<Item> holeEineXmlSeite(Reader reader)
     throws XmlPullParserException, IOException {
     Log.i("X020", "holeEineXmlSeite() erreicht");
 
@@ -132,9 +132,9 @@ public class XmlDlfParse {
     for (Item element : liste) {
       drucke(element + "Sendung aus der \"liste\" erledigt\n");
     }
-    return sendung;
+    return liste  ;
   }
-int debug = 0;
+int debug = 1;
    void drucke(String arg) {
     //System.out.print(arg);
     if(this.debug>8) Log.i("X010", arg);
